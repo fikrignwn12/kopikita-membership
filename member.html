@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profil Member - KopiKita</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-row">
+    <a class="logo" href="index.html">KopiKita</a>
+    <div class="header-actions">
+      <a class="btn btn-ghost btn-small" href="scan.html">Kasir</a>
+      <a class="btn btn-primary btn-small" href="register.html">Daftar</a>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="wrap">
+
+    <section id="status">
+      <p class="notice" id="status-msg" role="status">Memuat profil...</p>
+    </section>
+
+    <!-- Tidak ada kartu yang bisa dibuka -->
+    <section id="empty" hidden>
+      <h1>Profil member</h1>
+      <p class="lede">Buka profil lewat QR di kartu Anda atau tautan yang Anda simpan saat mendaftar. Kartu hilang? Sebutkan nomor HP Anda ke kasir, dan kasir bisa menampilkan kartu Anda lagi.</p>
+      <p><a class="btn btn-primary" href="register.html">Daftar gratis</a></p>
+    </section>
+
+    <!-- Profil -->
+    <section id="profile" hidden>
+      <div class="profile-grid">
+        <div id="card"></div>
+
+        <div class="profile-side">
+          <h1 id="p-name"></h1>
+          <p class="contact" id="p-tier"></p>
+          <p class="contact" id="p-contact"></p>
+
+          <div class="notice ok" id="bday" hidden style="margin-top:18px"></div>
+
+          <h2>Benefit tier Anda</h2>
+          <ul class="plain-list" id="perks"></ul>
+
+          <h2>Voucher</h2>
+          <p id="voucher-note"></p>
+
+          <h2>Riwayat poin</h2>
+          <ul class="history" id="hist"></ul>
+
+          <div class="actions">
+            <button class="btn btn-primary btn-small" type="button" id="btn-dl">Unduh QR</button>
+            <button class="btn btn-ghost btn-small" type="button" id="btn-copy">Salin tautan kartu</button>
+            <button class="btn btn-ghost btn-small" type="button" id="btn-refresh">Perbarui poin</button>
+          </div>
+          <p class="hint" id="copy-msg" role="status"></p>
+          <p class="hint">Simpan tautan kartu Anda dan jangan bagikan ke orang lain. Siapa pun yang memegangnya bisa melihat profil ini.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">&copy; 2026 KopiKita Cafe</div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+  (function () {
+    var el = function (id) { return document.getElementById(id); };
+    var current = null;
+    var isDemo = false;
+
+    var DEMO = {
+      id: 'KK-00740', nama: 'Sari Wulandari', hp: '08xxxxxxxxxx', lahir: null, poin: 740, trx: 12,
+      log: [
+        { ket: 'Transaksi', pts: 54, jumlah: 48000, dibuat: '2026-10-03T09:12:00Z' },
+        { ket: 'Bonus referral: Dimas', pts: 50, jumlah: null, dibuat: '2026-09-28T14:40:00Z' }
+      ]
+    };
+
+    function say(text, kind) {
+      var n = el('status-msg');
+      n.textContent = text;
+      n.className = 'notice' + (kind ? ' ' + kind : '');
+      el('status').hidden = !text;
+    }
+
+    function fmtDate(iso) {
+      var d = new Date(String(iso).length === 10 ? iso + 'T00:00:00' : iso);
+      return isNaN(d) ? '' : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    async function load() {
+      var p = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      if (window.location.hash === '#demo') { isDemo = true; show(DEMO); say('Ini profil contoh. Daftar untuk mendapatkan kartu Anda sendiri.'); return; }
+
+      var ref = null;
+      var v = p.get('m');
+      if (v && v.lastIndexOf('.') > 0) ref = { id: v.slice(0, v.lastIndexOf('.')), token: v.slice(v.lastIndexOf('.') + 1) };
+      else ref = KK.store.get('kk_last');
+
+      if (!ref || !ref.id || !ref.token) { el('status').hidden = true; el('empty').hidden = false; return; }
+      if (!KK.configured) { say(KK.errText(new Error('CONFIG')), 'warn'); return; }
+
+      say('Memuat profil...');
+      try {
+        var m = await KK.getMember(ref.id, ref.token);
+        if (!m) {
+          KK.store.del('kk_last');
+          say('Kartu tidak ditemukan. Periksa tautan atau QR Anda, atau minta kasir menampilkan kartu Anda.', 'warn');
+          el('empty').hidden = false;
+          return;
+        }
+        say('');
+        show(m);
+      } catch (ex) {
+        say(KK.errText(ex), 'warn');
+      }
+    }
+
+    function show(m) {
+      current = m;
+      el('empty').hidden = true;
+      el('profile').hidden = false;
+      document.title = m.nama + ' - Member KopiKita';
+
+      KK.mountCard(el('card'), m, 220, isDemo ? new URL('member.html#demo', window.location.href).href : undefined);
+
+      var t = KK.tierOf(m.poin);
+      el('p-name').textContent = m.nama;
+      el('p-tier').textContent = 'Member ' + t.name + ', diskon ' + t.disc + '% di semua menu';
+      var contact = 'HP ' + m.hp;
+      if (m.lahir) contact += ', lahir ' + fmtDate(m.lahir);
+      el('p-contact').textContent = contact;
+
+      var bd = el('bday');
+      if (KK.isBirthdayMonth(m)) {
+        bd.textContent = 'Bulan ini ulang tahun Anda. Sebutkan ke kasir untuk klaim bonus ulang tahun tier ' + t.name + '.';
+        bd.hidden = false;
+      } else { bd.hidden = true; }
+
+      el('perks').innerHTML = t.perks.map(function (p) { return '<li>' + KK.esc(p) + '</li>'; }).join('');
+
+      el('voucher-note').textContent = m.trx >= 5
+        ? 'Voucher gratis pertama sudah terbuka. Tanyakan ke kasir untuk menukarnya.'
+        : (5 - m.trx) + ' transaksi lagi untuk voucher gratis pertama.';
+
+      var log = m.log || [];
+      el('hist').innerHTML = log.length
+        ? log.slice(0, 8).map(function (l) {
+            var ket = KK.esc(l.ket) + (l.jumlah ? ' ' + KK.rupiah(l.jumlah) : '');
+            return '<li><span>' + ket + '<br><span class="when">' + fmtDate(l.dibuat) + '</span></span>' +
+                   '<span class="pts">+' + KK.num(l.pts) + ' poin</span></li>';
+          }).join('')
+        : '<li><span>Belum ada transaksi. Tunjukkan QR ke kasir untuk mulai mengumpulkan poin.</span></li>';
+
+      el('btn-refresh').hidden = isDemo;
+      el('btn-copy').hidden = isDemo;
+    }
+
+    el('btn-dl').addEventListener('click', function () {
+      if (!current) return;
+      var box = el('card');
+      var img = box.querySelector('.qr img');
+      var cv = box.querySelector('.qr canvas');
+      var src = (img && img.src && img.src.indexOf('data:') === 0) ? img.src : (cv ? cv.toDataURL('image/png') : '');
+      if (!src) { el('copy-msg').textContent = 'QR belum siap. Coba lagi sebentar lagi.'; return; }
+      var a = document.createElement('a');
+      a.href = src;
+      a.download = 'kopikita-' + current.id + '.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+
+    el('btn-copy').addEventListener('click', function () {
+      if (!current) return;
+      var url = KK.link(current);
+      var done = function () { el('copy-msg').textContent = 'Tautan kartu disalin.'; };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done, function () { window.prompt('Salin tautan ini:', url); });
+      } else {
+        window.prompt('Salin tautan ini:', url);
+      }
+    });
+
+    el('btn-refresh').addEventListener('click', async function () {
+      if (!current) return;
+      el('copy-msg').textContent = 'Memperbarui...';
+      try {
+        var m = await KK.getMember(current.id, current.token);
+        if (m) { show(m); el('copy-msg').textContent = 'Poin diperbarui.'; }
+      } catch (ex) { el('copy-msg').textContent = KK.errText(ex); }
+    });
+
+    load();
+  })();
+</script>
+</body>
+</html>

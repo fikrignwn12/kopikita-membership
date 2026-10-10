@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kasir - KopiKita</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-row">
+    <a class="logo" href="index.html">KopiKita</a>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-small" type="button" id="logout" hidden>Keluar</button>
+      <a class="btn btn-primary btn-small" href="register.html">Daftar</a>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="wrap">
+    <h1>Kasir</h1>
+
+    <!-- Login staf -->
+    <section id="login" hidden>
+      <p class="lede">Masuk dengan akun kasir untuk memindai kartu dan mencatat transaksi.</p>
+      <form class="form-card" id="login-form" novalidate>
+        <label for="email">Email kasir</label>
+        <input id="email" type="email" autocomplete="username" required>
+        <label for="password">Kata sandi</label>
+        <input id="password" type="password" autocomplete="current-password" required>
+        <p class="error" id="login-err" role="alert" hidden></p>
+        <button class="btn btn-primary" type="submit" id="login-btn">Masuk</button>
+      </form>
+    </section>
+
+    <p class="notice warn" id="config-msg" role="alert" hidden></p>
+
+    <!-- Area kasir -->
+    <section id="kasir" hidden>
+      <p class="lede">Arahkan kamera ke QR di kartu member. Profil terbuka, lalu catat transaksinya.</p>
+      <div class="scan-grid">
+        <div>
+          <div id="reader"></div>
+          <p class="notice warn" id="scan-msg" role="status" hidden style="margin-top:16px"></p>
+
+          <form class="scan-fallback" id="manual" novalidate>
+            <label for="manual-id">Kamera tidak bisa dipakai? Masukkan ID atau nomor HP</label>
+            <input id="manual-id" type="text" placeholder="KK-12345 atau 08123456789" autocomplete="off">
+            <button class="btn btn-ghost btn-small" type="submit">Cari member</button>
+          </form>
+        </div>
+
+        <div>
+          <div class="panel" id="empty">
+            <p style="margin:0">Belum ada member yang dipindai. Hasil pindai akan tampil di sini.</p>
+          </div>
+
+          <div class="panel" id="result" hidden>
+            <div class="member-line">
+              <h2 id="r-name"></h2>
+              <span class="chip" id="r-chip"></span>
+            </div>
+            <p class="contact" id="r-info"></p>
+            <div class="notice ok" id="r-bday" hidden style="margin-top:14px"></div>
+
+            <form id="trx" novalidate>
+              <label for="amount">Total belanja sebelum diskon (Rp)</label>
+              <input id="amount" type="number" inputmode="numeric" min="1000" step="500" placeholder="65000">
+              <div class="calc">
+                <dl>
+                  <dt>Diskon member</dt><dd id="c-disc">-</dd>
+                  <dt>Total bayar</dt><dd id="c-pay">-</dd>
+                  <dt>Poin didapat</dt><dd id="c-pts">-</dd>
+                </dl>
+              </div>
+              <p class="error" id="r-err" role="alert" hidden></p>
+              <button class="btn btn-primary" type="submit" id="trx-btn" style="margin-top:18px">Catat transaksi</button>
+            </form>
+
+            <div id="done" hidden>
+              <div class="notice ok" id="done-msg"></div>
+            </div>
+
+            <div class="actions">
+              <button class="btn btn-primary btn-small" type="button" id="again" hidden>Pindai member berikutnya</button>
+              <a class="btn btn-ghost btn-small" id="open-card" href="#" target="_blank" rel="noopener">Tampilkan kartu member</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">&copy; 2026 KopiKita Cafe</div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+  (function () {
+    var el = function (id) { return document.getElementById(id); };
+    var scanner = null, current = null, busy = false;
+
+    /* ---------- Login ---------- */
+    async function init() {
+      if (!KK.configured) {
+        el('config-msg').textContent = KK.errText(new Error('CONFIG'));
+        el('config-msg').hidden = false;
+        return;
+      }
+      try {
+        if (await KK.hasSession() && await KK.amIStaff()) { openKasir(); return; }
+        if (await KK.hasSession()) await KK.signOut();
+      } catch (ex) {
+        el('config-msg').textContent = KK.errText(ex);
+        el('config-msg').hidden = false;
+        return;
+      }
+      showLogin();
+    }
+
+    function showLogin() {
+      stopScan();
+      el('kasir').hidden = true;
+      el('logout').hidden = true;
+      el('login').hidden = false;
+    }
+
+    el('login-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var err = el('login-err'), btn = el('login-btn');
+      err.hidden = true;
+      btn.disabled = true; btn.textContent = 'Masuk...';
+      try {
+        await KK.signIn(el('email').value.trim(), el('password').value);
+        if (!(await KK.amIStaff())) {
+          await KK.signOut();
+          throw new Error('FORBIDDEN');
+        }
+        el('password').value = '';
+        openKasir();
+      } catch (ex) {
+        err.textContent = KK.errText(ex);
+        err.hidden = false;
+      }
+      btn.disabled = false; btn.textContent = 'Masuk';
+    });
+
+    el('logout').addEventListener('click', async function () {
+      await KK.signOut();
+      current = null;
+      resetResult();
+      showLogin();
+    });
+
+    function openKasir() {
+      el('login').hidden = true;
+      el('kasir').hidden = false;
+      el('logout').hidden = false;
+      startScan();
+    }
+
+    /* Bila sesi habis di tengah jalan, kembali ke login */
+    function handleError(ex, show) {
+      if (KK.errCode(ex) === 'FORBIDDEN' || /jwt|not authenticated/i.test((ex && ex.message) || '')) {
+        showLogin();
+        return;
+      }
+      show(KK.errText(ex));
+    }
+
+    /* ---------- Pemindai ---------- */
+    function msg(text) {
+      var n = el('scan-msg');
+      if (!text) { n.hidden = true; return; }
+      n.textContent = text; n.hidden = false;
+    }
+
+    async function startScan() {
+      msg('');
+      busy = false;
+      if (!window.Html5Qrcode) {
+        msg('Pemindai belum termuat. Periksa koneksi internet, atau cari member lewat ID di bawah.');
+        return;
+      }
+      try {
+        scanner = scanner || new Html5Qrcode('reader');
+        if (scanner.isScanning) return;
+        await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 240, height: 240 } },
+          onScan, function () {});
+      } catch (e) {
+        msg('Kamera tidak bisa dibuka. Izinkan akses kamera di browser (butuh HTTPS), atau cari member lewat ID di bawah.');
+      }
+    }
+
+    async function stopScan() {
+      try { if (scanner && scanner.isScanning) await scanner.stop(); } catch (e) {}
+    }
+
+    async function lookup(q) {
+      var m = await KK.kasirFind(q);
+      if (!m) { msg('Member tidak ditemukan. Periksa QR, ID, atau nomor HP.'); busy = false; return; }
+      await stopScan();
+      showMember(m);
+    }
+
+    async function onScan(text) {
+      if (busy) return;
+      var p = KK.parseScan(text);
+      if (!p || !/^KK-\d+$/.test(p.id)) { msg('QR ini bukan kartu KopiKita. Coba pindai ulang.'); return; }
+      busy = true;
+      try { await lookup(p.id); }
+      catch (ex) { busy = false; handleError(ex, msg); }
+    }
+
+    el('manual').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var q = el('manual-id').value.trim();
+      if (!q) return;
+      busy = true;
+      try { await lookup(q); }
+      catch (ex) { busy = false; handleError(ex, msg); }
+    });
+
+    /* ---------- Hasil & transaksi ---------- */
+    function resetResult() {
+      el('result').hidden = true;
+      el('empty').hidden = false;
+    }
+
+    function renderInfo() {
+      var t = KK.tierOf(current.poin);
+      var chip = el('r-chip');
+      chip.textContent = t.name;
+      chip.className = 'chip ' + t.key;
+      el('r-info').textContent = current.id + ', ' + KK.num(current.poin) + ' poin, ' + current.trx + ' transaksi';
+    }
+
+    function showMember(m) {
+      current = m;
+      msg('');
+      el('empty').hidden = true;
+      el('result').hidden = false;
+      el('trx').hidden = false;
+      el('done').hidden = true;
+      el('again').hidden = true;
+      el('r-err').hidden = true;
+      el('amount').value = '';
+      el('r-name').textContent = m.nama;
+      el('open-card').href = KK.link(m);
+      renderInfo();
+      var bd = el('r-bday');
+      if (KK.isBirthdayMonth(m)) {
+        bd.textContent = 'Bulan ulang tahun member. Tawarkan bonus ulang tahun tier ' + KK.tierOf(m.poin).name + '.';
+        bd.hidden = false;
+      } else { bd.hidden = true; }
+      updateCalc();
+      el('amount').focus();
+    }
+
+    function updateCalc() {
+      var amt = parseInt(el('amount').value, 10);
+      if (!current || !amt || amt < 1) {
+        el('c-disc').textContent = '-'; el('c-pay').textContent = '-'; el('c-pts').textContent = '-';
+        return;
+      }
+      var p = KK.preview(current, amt);
+      el('c-disc').textContent = p.disc + '%';
+      el('c-pay').textContent = KK.rupiah(p.bayar);
+      el('c-pts').textContent = '+' + KK.num(p.pts) + ' poin';
+    }
+    el('amount').addEventListener('input', updateCalc);
+
+    el('trx').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var amt = parseInt(el('amount').value, 10);
+      var err = el('r-err'), btn = el('trx-btn');
+      if (!amt || amt < 1000) {
+        err.textContent = 'Isi total belanja minimal Rp1.000.';
+        err.hidden = false;
+        return;
+      }
+      err.hidden = true;
+      btn.disabled = true; btn.textContent = 'Menyimpan...';
+      try {
+        var r = await KK.kasirAdd(current.id, amt);
+        var token = current.token;
+        current = r.member;
+        current.token = token;
+        var text = 'Tercatat. Total bayar ' + KK.rupiah(r.bayar) + ', ' + KK.num(r.pts) + ' poin masuk. ' +
+                   'Saldo sekarang ' + KK.num(current.poin) + ' poin.';
+        if (r.tier_after !== r.tier_before) text += ' Member naik ke tier ' + KK.tierOf(current.poin).name + '.';
+        if (r.voucher) text += ' Voucher gratis pertama terbuka: berikan ke member.';
+        el('done-msg').textContent = text;
+        el('trx').hidden = true;
+        el('done').hidden = false;
+        el('again').hidden = false;
+        renderInfo();
+      } catch (ex) {
+        handleError(ex, function (t) { err.textContent = t; err.hidden = false; });
+      }
+      btn.disabled = false; btn.textContent = 'Catat transaksi';
+    });
+
+    el('again').addEventListener('click', function () {
+      current = null;
+      resetResult();
+      startScan();
+    });
+
+    init();
+  })();
+</script>
+</body>
+</html>

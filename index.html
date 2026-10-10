@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KopiKita Membership</title>
+<meta name="description" content="Daftar gratis, tunjukkan QR di kasir, dan kumpulkan poin menuju diskon sampai 30%.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-row">
+    <a class="logo" href="index.html">KopiKita</a>
+    <nav class="nav" aria-label="Utama">
+      <a href="#benefit">Benefit</a>
+      <a href="#tier">Tier</a>
+      <a href="#cara-kerja">Cara kerja</a>
+    </nav>
+    <div class="header-actions">
+      <a class="btn btn-ghost btn-small" href="scan.html">Kasir</a>
+      <a class="btn btn-primary btn-small" href="register.html">Daftar</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <h1>Tiap cangkir jadi poin.</h1>
+        <p class="lede">Daftar gratis, tunjukkan QR di kasir, dan kumpulkan poin menuju diskon sampai 30%. Tanpa kartu plastik, tanpa aplikasi tambahan.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="register.html">Daftar gratis</a>
+          <a class="btn btn-ghost" href="scan.html">Buka kasir</a>
+        </div>
+      </div>
+      <div class="demo-wrap">
+        <div id="demo-card"></div>
+        <p class="demo-caption">Ini kartu member contoh. Pindai QR-nya dengan kamera ponsel untuk membuka profil member.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="benefit">
+    <div class="wrap">
+      <h2>Yang Anda dapat sebagai member</h2>
+      <p class="lede">Pelanggan biasa membayar harga penuh. Member mendapat potongan, poin, dan perlakuan khusus di setiap kunjungan.</p>
+      <ul class="rows">
+        <li><h3>Diskon 10% sampai 30%</h3><p>Potongan otomatis di semua menu. Besarnya mengikuti tier Anda.</p></li>
+        <li><h3>Poin setiap pembelian</h3><p>Setiap Rp10.000 menjadi 10 sampai 15 poin, tergantung tier. Poin bisa ditukar menu gratis dan membawa Anda naik tier.</p></li>
+        <li><h3>Bonus ulang tahun</h3><p>Di bulan ulang tahun, Anda mendapat hadiah khusus: dari espresso gratis sampai diskon 50% dan satu set menu.</p></li>
+        <li><h3>Voucher gratis</h3><p>Voucher pertama aktif setelah transaksi ke-5. Member Gold dan Platinum mendapat voucher menu setiap bulan.</p></li>
+        <li><h3>Prioritas tempat duduk</h3><p>Member Gold mendapat prioritas tempat duduk. Member Platinum bisa reservasi sehari sebelumnya, termasuk area VIP.</p></li>
+        <li><h3>Bonus ajak teman</h3><p>Setiap teman yang mendaftar dengan ID member Anda memberi Anda 50 poin.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="tier">
+    <div class="wrap">
+      <h2>Tier membership</h2>
+      <p class="lede">Semua orang mulai dari Silver. Naik tier otomatis saat poin Anda cukup.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col"><span class="sr-only">Benefit</span></th>
+              <th scope="col" class="t-silver">Silver</th>
+              <th scope="col" class="t-gold">Gold</th>
+              <th scope="col" class="t-platinum">Platinum</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Syarat</th><td>Member baru</td><td>500 poin</td><td>1.500 poin</td></tr>
+            <tr><th scope="row">Diskon semua menu</th><td>10%</td><td>20%</td><td>30%</td></tr>
+            <tr><th scope="row">Poin per Rp10.000</th><td>10</td><td>12</td><td>15</td></tr>
+            <tr><th scope="row">Voucher</th><td>1 voucher setelah transaksi ke-5</td><td>1 menu gratis per bulan</td><td>2 menu gratis per bulan</td></tr>
+            <tr><th scope="row">Tempat duduk</th><td>Reguler</td><td>Prioritas</td><td>Reservasi premium dan area VIP</td></tr>
+            <tr><th scope="row">Ulang tahun</th><td>Gratis espresso</td><td>Diskon 30% + gratis cake</td><td>Diskon 50% + gratis set menu</td></tr>
+            <tr><th scope="row">Menu terbatas</th><td>Tidak ada</td><td>Tidak ada</td><td>Akses lebih awal</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="cara-kerja">
+    <div class="wrap">
+      <h2>Cara kerjanya</h2>
+      <ol class="steps">
+        <li><h3>Daftar online</h3><p>Isi nama dan nomor HP di halaman pendaftaran. Gratis dan selesai dalam satu menit.</p></li>
+        <li><h3>Dapat kartu digital</h3><p>QR unik Anda langsung muncul. Simpan gambarnya atau buka lagi lewat ID member.</p></li>
+        <li><h3>Tunjukkan QR di kasir</h3><p>Kasir memindai QR dengan kamera, lalu profil dan tier Anda terbuka.</p></li>
+        <li><h3>Kumpulkan poin</h3><p>Poin masuk setelah transaksi. Capai 500 poin untuk Gold dan 1.500 poin untuk Platinum.</p></li>
+      </ol>
+      <p style="margin-top:32px"><a class="btn btn-primary" href="register.html">Daftar gratis</a></p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">&copy; 2026 KopiKita Cafe</div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="app.js"></script>
+<script>
+  (function () {
+    var demo = { id: 'KK-00740', nama: 'Sari Wulandari', poin: 740 };
+    var url = new URL('member.html#demo', window.location.href).href;
+    KK.mountCard(document.getElementById('demo-card'), demo, 200, url);
+  })();
+</script>
+</body>
+</html>
