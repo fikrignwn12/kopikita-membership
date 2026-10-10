@@ -2,6 +2,6 @@
    Pakai "Project URL" dan kunci "anon public".
    JANGAN pernah menaruh kunci "service_role" di file ini. */
 window.KK_CONFIG = {
-  SUPABASE_URL: 'GANTI_DENGAN_PROJECT_URL',
-  SUPABASE_ANON_KEY: 'GANTI_DENGAN_ANON_KEY'
+  SUPABASE_URL: 'https://fxdffvnruawjpdpcpwaw.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_CShxOC13Ym1AntJDPcPeFw_Gy-zauVy'
 };
